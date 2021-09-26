@@ -1,0 +1,1 @@
+module.exports.JWTSecret="Test@SceretKey12"
