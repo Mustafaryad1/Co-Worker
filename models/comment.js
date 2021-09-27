@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const Comment = mongoose.model(
-  "coWorkerComment",
+  "Comment",
   new mongoose.Schema({
     user: {
       type:mongoose.Schema.Types.ObjectId,

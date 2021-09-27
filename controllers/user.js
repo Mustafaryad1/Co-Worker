@@ -15,8 +15,9 @@ module.exports.login = async(req,res)=>{
 
 module.exports.register = async(req,res)=>{
     try{
-        const {password} = req.body
-        const user = new User(req.body)
+        const {password} = req.body;
+        req.body.role = 'user';
+        const user = new User(req.body);
         user.setPassword(password);
         user.reset_token = password;
         console.log(user.reset_token);

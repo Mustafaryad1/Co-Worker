@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const Rating = mongoose.model(
-  "coWorkerRating",
+  "Rating",
   new mongoose.Schema({
     user: {
       type:mongoose.Schema.Types.ObjectId,

@@ -1,11 +1,14 @@
 const Place = require('../models/place');
 const Rating = require('../models/rating');
 const Comment = require('../models/comment');
+const Room = require('../models/room');
+const { populate } = require('../models/place');
+
 
 module.exports.create = (req,res)=>{
           const body = JSON.parse(JSON.stringify(req.body));
           if (!body) {
-            return res.status(400).json({
+            res.status(400).send({
               success: false,
               error: "You must add place",
             });
@@ -13,7 +16,7 @@ module.exports.create = (req,res)=>{
           body.isApproved = false;
           const place = new Place(body);
           if (!place) {
-            return res.status(400).json({
+            res.status(400).send({
               success: false,
               error: err
             });
@@ -26,17 +29,20 @@ module.exports.create = (req,res)=>{
           place
             .save()
             .then(async (data) => {
-              category.places.push(data._id);
-              await category.save()
-              return res.status(201).json({
+              res.status(201).send({
                 success: true,
                 id: place._id,
                 message: "Place item created",
               });
             })
             .catch((error) => {
-                console.log(error)
-              return res.status(400).json({
+              if(error?.code===16755){
+                res.status(400).send({
+                  success:false,
+                  message:"Location is invalid"
+                })
+              }
+               res.status(400).send({
                 error,
                 message: "Place item not created",
               });
@@ -44,17 +50,50 @@ module.exports.create = (req,res)=>{
 };
 
 module.exports.places = async(req,res)=>{
-  const {skip=0,limit=10} = req.query;
-  const places = await Place.find({});
-  res.send({places})
+ const places = await Place.find();
+ res.send({success:true, places})
+};
+
+module.exports.placeDetails = async(req,res)=>{
+  await Place.findById(req.params.id).populate({
+    path: 'owner',
+    select: 'username'
+  }).populate({
+    path: 'comments',
+    select: 'text',
+    populate: {
+      path: "user",
+      select: "username"
+    }
+  }).populate({
+    path:'rooms'
+  }).exec((err, place) => {
+    if (err) {
+      // console.log(err);
+       res.status(400).send({
+        success: false,
+        error: err
+      });
+    }
+    // console.log(err);
+    // console.log(place);
+    if (!place) {
+      res.status(404).send({
+        success: false,
+        error: `Place not found`
+      });
+    }
+    res.status(200).send({
+      success: true,
+      data: place
+    });
+  });
 };
 
 module.exports.TopratedPlaces = (req,res)=>{
     res.send({ok:"l"})
-}
-module.exports.placeDetails = (req,res)=>{
-    res.send({ok:"l"})
-}
+};
+
 module.exports.RelatedPlaces = (req,res)=>{
     res.send({ok:"l"})
 }
@@ -98,10 +137,11 @@ module.exports.addRatingToPlace = async (req, res) => {
       else{
       //  rating =  await Rating.updateOne({'user':req.user._id,'place':place._id},{'rate_value':req.body.rate_value});
         place_user_rate.rate_value = req.body.rate_value;
-        await place_user_rate.save().catch(err =>
+        await place_user_rate.save().catch(err =>{
+          console.log(err)
           res.send({
             success:false,message:"value not valid you should enter one value from [0,1,2,3,4,5]"})
-          )
+        })
       }
        let [{rates}]= await Rating.aggregate(
         [{
@@ -121,14 +161,14 @@ module.exports.addRatingToPlace = async (req, res) => {
           if (err) {
             res.send(err);
           } else {
-            return result
+            return result;
           }
         }
       );
-    let place_rates = Math.ceil(rates/place.rating.length)
+    let place_rates = Math.ceil(rates/place.rating.length);
     // res.send({place_rates})
-    await Place.updateOne({'_id':place._id},{'rates':place_rates})
-    res.send({succes:true,place_rates})
+    await Place.updateOne({'_id':place._id},{'rates':place_rates});
+    res.send({succes:true,place_rates});
 };
 
 module.exports.addCommentToPlace = async (req, res) => {
@@ -141,14 +181,14 @@ module.exports.addCommentToPlace = async (req, res) => {
   
     const body = req.body;
     if (!body) {
-      return res.status(400).json({
+      res.status(400).send({
         success: false,
         error: "You must add comment",
       });
     }
     const comment = new Comment(body);
     if (!comment) {
-      return res.status(400).json({
+       res.status(400).send({
         success: false,
         error: err
       });
@@ -160,16 +200,58 @@ module.exports.addCommentToPlace = async (req, res) => {
         place.comments.push(comment._id)
         place.save();
         console.log(comment.populate('user'));
-        return res.status(200).json({
+        res.status(200).send({
           success: true,
           id: comment._id,
           message: "Comment item created",
         });
       })
       .catch((error) => {
-        return res.status(400).json({
+        res.status(400).send({
           error,
           message: "Comment item not created",
         });
       });
 };
+
+module.exports.addRoomToPlace = async(req,res)=>{
+  const place_id = req.params.id;
+  const place = await Place.findById(place_id).catch(
+    err => res.send({
+        success: false,
+        message: "place not exist"
+      }
+    ));
+    const body = req.body;
+    if (!body) {
+      res.status(400).send({
+        success: false,
+        error: "You must add room details",
+      });
+    }
+    const room = new Room(body);
+    if (!room) {
+       res.status(400).send({
+        success: false,
+        error: err
+      });
+    }
+    room.place = place_id;
+    room
+      .save()
+      .then((room) => {
+        place.rooms.push(room._id)
+        place.save();
+        res.status(200).send({
+          success: true,
+          id: room._id,
+          message: "room item created",
+        });
+      })
+      .catch((error) => {
+        res.status(400).send({
+          error,
+          message: "room item not created",
+        });
+      });
+}

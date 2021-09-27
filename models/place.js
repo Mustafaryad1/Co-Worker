@@ -24,6 +24,10 @@ const PlaceSchema = new Schema(
         type:mongoose.Schema.Types.ObjectId,
         ref:"Comment"
       }],
+    rooms:[{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Room"
+      }],
     owner:{
       type:mongoose.Schema.Types.ObjectId,
       ref:"User",
@@ -90,6 +94,6 @@ PlaceSchema.index({ location: '2dsphere' });
 //     done()
 //   })
 
-const Place = mongoose.model("Place", PlaceSchema, "coWorkerPlaces");
+const Place = mongoose.model("Place", PlaceSchema);
 
 module.exports = Place;

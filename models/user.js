@@ -115,6 +115,6 @@ UserSchema.statics.login = async function (email, password) {
 };
 
 
-const User = mongoose.model('User', UserSchema, 'coWorkerUsers');
+const User = mongoose.model('User', UserSchema);
 
 module.exports = User;
